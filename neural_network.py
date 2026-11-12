@@ -7,21 +7,16 @@ from read_file import read_ubyte_images, read_ubyte_labels
 
 class NeuralNetwork:
     def __init__(self):
-        self.hidden_layer = Layer(128, 784, lambda z: np.maximum(0, z))
-        self.output_layer = Layer(10, 128, lambda z: z)
+        # bird_y, pipe_x, pipe_height
+        self.hidden_layer = Layer(3, 3, lambda z: np.maximum(0, z))
+        self.output_layer = Layer(2, 3, lambda z: z)
         
     
     def forward(self, input):
         hidden_output = self.hidden_layer.forward(input)
         final_output = self.output_layer.forward(hidden_output)
 
-        return final_output
-
-    def predict(self, inputs):
-        outputs = []
-        for input in inputs:
-            outputs.append(np.argmax(self.forward(input)))
-        return outputs
+        return max(final_output)
     
     def cost(self, input, correct_output):
         output = self.forward(input)
@@ -53,17 +48,12 @@ class NeuralNetwork:
             self.hidden_layer.biases[i] -= h
             self.hidden_layer.costGradientB[i] = delta_cost / h
 
-        # Partial Derivative
         for i in range(len(self.output_layer.weights)):
             for j in range(len(self.output_layer.weights[i])):
-                self.output_layer.costGradientW[i, j] = self.cost_gradient(input, correct_output)
-        # End test
-        # for i in range(len(self.output_layer.weights)):
-        #     for j in range(len(self.output_layer.weights[i])):
-        #         self.output_layer.weights[i, j] += h
-        #         delta_cost = self.cost(input, correct_output) - original_cost
-        #         self.output_layer.weights[i, j] -= h
-        #         self.output_layer.costGradientW[i, j] = delta_cost / h
+                self.output_layer.weights[i, j] += h
+                delta_cost = self.cost(input, correct_output) - original_cost
+                self.output_layer.weights[i, j] -= h
+                self.output_layer.costGradientW[i, j] = delta_cost / h
 
         for i in range(len(self.output_layer.biases)):
             self.output_layer.biases[i] += h

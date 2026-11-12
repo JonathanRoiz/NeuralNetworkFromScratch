@@ -29,11 +29,6 @@ class NeuralNetwork:
 
         return cost
 
-    def cost_gradient(self, input, correct_output):
-        output = self.forward(input)
-        cost_gradient = (1 / 2) * np.sum(2 * (output - correct_output))
-        return cost_gradient
-
     def average_cost(self, inputs, correct_outputs):
         total_cost = 0
         for input, correct_output in zip(inputs, correct_outputs):

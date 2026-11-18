@@ -16,7 +16,7 @@ const friction = 1
 
 let cars = [];
 function spawnRandomCars() {
-    for (let i = 0; i < 2000; i++) {
+    for (let i = 0; i < 100; i++) {
         const car = {
             x: canvas.width / 10,
             y: canvas.height / 1.5,
@@ -29,7 +29,7 @@ function spawnRandomCars() {
             max_velocity: 10,
             acceleration: 0,
             highest_checkpoint: -1,
-            neural_network: new NeuralNetwork(5, 7, 4, "sigmoid"),
+            neural_network: new NeuralNetwork(17, 10, 4, "sigmoid"),
             color: "black",
             turnLeft() {
                 this.angular_velocity = .8;
@@ -48,8 +48,11 @@ function spawnRandomCars() {
     }
 }
 
+const chance = 0.01 + Math.random() * 0.15;          // ~2 to 20 weights
+const amount = 10 ** (-2 + Math.random() * 2.3); 
+
 function spawnCars(best_nn) {
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 500; i++) {
         const car = {
             x: canvas.width / 10,
             y: canvas.height / 1.5,
@@ -62,7 +65,7 @@ function spawnCars(best_nn) {
             max_velocity: 10,
             acceleration: 0,
             highest_checkpoint: -1,
-            neural_network: best_nn.clone().mutate(Math.random() * 5, .1),
+            neural_network: best_nn.clone().mutate(amount, chance),
             color: "orange",
             turnLeft() {
                 this.angular_velocity = .8;
@@ -649,7 +652,7 @@ function carScore(car) {
 }
 
 let best_nn = null;
-let best_score = -Infinity;
+let best_score = 1;
 
 function update(deltaTime) {
     round_time += deltaTime;
@@ -659,6 +662,7 @@ function update(deltaTime) {
         cars = [];
         if (best_nn) spawnCars(best_nn);
         spawnRandomCars();
+        return
     }
     cars = cars.filter(car => !isCollidingWall(car));
     
@@ -697,11 +701,15 @@ function update(deltaTime) {
                 {x: next.second_point[0], y: next.second_point[1]})) {
             car.highest_checkpoint = nextIdx;
         }
-
+        
+        if (car.color == "purple") {
+            car.color = "orange";
+        }
         const s = carScore(cars[i]);
-        if (s > best_score) {
+        if (s >= best_score) {
             best_score = s;
-            best_nn = cars[i].neural_network;
+            best_nn = cars[i].neural_network.clone();
+            car.color = "purple";
         }
     }
 }
@@ -748,11 +756,21 @@ let lastTime = 0
 const STEP = 1 / 60;
 let accumulator = 0;
 
+function features(car) {
+    const x = (car.x + car.width / 2 - 350) / 350;
+    const y = (car.y + car.height / 2 - 310) / 310;
+    const f = [x, y, car.velocity / car.max_velocity, Math.sin(car.angle), Math.cos(car.angle)];
+    for (const k of [2, 8, 32]) {
+        f.push(Math.sin(k * x), Math.cos(k * x), Math.sin(k * y), Math.cos(k * y));
+    }
+    return f;   // 17 inputs
+}
+
 function controlCars() {
         for (const car of cars) {
         car.acceleration = 0;
         car.angular_velocity = 0;
-        const output = car.neural_network.predict([car.x / canvas.width,car.y / canvas.height,car.velocity / car.max_velocity,Math.sin(car.angle), Math.cos(car.angle)]);
+        const output = car.neural_network.predict(features(car));
         if (output[0] > output[1] && output[0] > .5) {
             car.accelerate();
         }

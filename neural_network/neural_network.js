@@ -9,6 +9,7 @@ export class NeuralNetwork {
         this.num_outputs = num_outputs;
         this.output_activation = output_activation;
         this.hidden_layer = new Layer(num_hidden_nodes, num_inputs, (z) => Math.tanh(z));
+        this.hidden_layer2 = new Layer(num_hidden_nodes, num_hidden_nodes, (z) => Math.tanh(z));
         this.output_layer = new Layer(
             num_outputs,
             num_hidden_nodes,
@@ -18,7 +19,8 @@ export class NeuralNetwork {
 
     forward(input) {
         const hidden_output = this.hidden_layer.forward(input);
-        const final_output = this.output_layer.forward(hidden_output);
+        const hidden_output2 = this.hidden_layer2.forward(hidden_output);
+        const final_output = this.output_layer.forward(hidden_output2);
 
         return final_output;
     }
@@ -37,6 +39,17 @@ export class NeuralNetwork {
             }
             if (Math.random() < mutation_chance) {
                 this.hidden_layer.biases[i] += Math.random() * mutation - mutation / 2;
+            }
+        }
+
+        for (let i = 0; i < this.hidden_layer2.weights.length; i++) {
+            for (let j = 0; j < this.hidden_layer2.weights[i].length; j++) {
+                if (Math.random() < mutation_chance) {
+                    this.hidden_layer2.weights[i][j] += Math.random() * mutation - mutation / 2;
+                }
+            }
+            if (Math.random() < mutation_chance) {
+                this.hidden_layer2.biases[i] += Math.random() * mutation - mutation / 2;
             }
         }
 
@@ -59,6 +72,8 @@ export class NeuralNetwork {
 
         copy.hidden_layer.weights = structuredClone(this.hidden_layer.weights);
         copy.hidden_layer.biases = structuredClone(this.hidden_layer.biases);
+        copy.hidden_layer2.weights = structuredClone(this.hidden_layer2.weights);
+        copy.hidden_layer2.biases = structuredClone(this.hidden_layer2.biases);
         copy.output_layer.weights = structuredClone(this.output_layer.weights);
         copy.output_layer.biases = structuredClone(this.output_layer.biases);
 

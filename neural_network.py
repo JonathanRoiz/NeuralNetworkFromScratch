@@ -1,26 +1,24 @@
 from layer import Layer
 import numpy as np
 import math
-from read_file import read_ubyte_images, read_ubyte_labels
 
 # Feed forward neural network for mnist number classification
 
 class NeuralNetwork:
     def __init__(self):
-        # bird_y, pipe_x, pipe_height
-        self.hidden_layer = Layer(3, 3, lambda z: np.maximum(0, z))
-        self.output_layer = Layer(2, 3, lambda z: z)
+        self.hidden_layer = Layer(128, 784, lambda z: np.maximum(0, z))
+        self.output_layer = Layer(10, 128, lambda z: z)
         
     
     def forward(self, input):
         hidden_output = self.hidden_layer.forward(input)
         final_output = self.output_layer.forward(hidden_output)
 
-        return max(final_output)
+        return final_output
     
     def cost(self, input, correct_output):
         output = self.forward(input)
-        cost = (1 / 2) * np.sum((output - correct_output) ** 2)
+        cost = 1/2 * np.sum((output - correct_output) ** 2)
 
         return cost
 
@@ -32,34 +30,21 @@ class NeuralNetwork:
         return average_cost
 
     def train(self, input, correct_output, learn_rate):
-        h = .00001
-        original_cost = self.cost(input, correct_output)
+        output_activation = self.forward(input)
 
-        for i in range(len(self.hidden_layer.weights)):
-            for j in range(len(self.hidden_layer.weights[i])):
-                self.hidden_layer.weights[i, j] += h
-                delta_cost = self.cost(input, correct_output) - original_cost
-                self.hidden_layer.weights[i, j] -= h
-                self.hidden_layer.costGradientW[i, j] = delta_cost / h
+        cost_derivative = output_activation - correct_output
+        output_activation_derivative = np.ones(len(self.output_layer.weights))
+        cost_derivatives_with_respect_to_output = cost_derivative*output_activation_derivative
+        self.output_layer.costGradientW = np.outer(cost_derivatives_with_respect_to_output, self.hidden_layer.activations)
 
-        for i in range(len(self.hidden_layer.biases)):
-            self.hidden_layer.biases[i] += h
-            delta_cost = self.cost(input, correct_output) - original_cost
-            self.hidden_layer.biases[i] -= h
-            self.hidden_layer.costGradientB[i] = delta_cost / h
+        self.output_layer.costGradientB = cost_derivatives_with_respect_to_output
 
-        for i in range(len(self.output_layer.weights)):
-            for j in range(len(self.output_layer.weights[i])):
-                self.output_layer.weights[i, j] += h
-                delta_cost = self.cost(input, correct_output) - original_cost
-                self.output_layer.weights[i, j] -= h
-                self.output_layer.costGradientW[i, j] = delta_cost / h
-
-        for i in range(len(self.output_layer.biases)):
-            self.output_layer.biases[i] += h
-            delta_cost = self.cost(input, correct_output) - original_cost
-            self.output_layer.biases[i] -= h
-            self.output_layer.costGradientB[i] = delta_cost / h
+        cost_derivative_sums = self.output_layer.weights.T @ cost_derivatives_with_respect_to_output
+        relu_derivatives = (self.hidden_layer.raw_output >= 0).astype(float)
+        hidden_delta = relu_derivatives * cost_derivative_sums
+        
+        self.hidden_layer.costGradientB = hidden_delta
+        self.hidden_layer.costGradientW = np.outer(hidden_delta, input)
 
         self.hidden_layer.apply_gradients(learn_rate)
         self.output_layer.apply_gradients(learn_rate)

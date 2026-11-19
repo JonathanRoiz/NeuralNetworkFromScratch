@@ -8,6 +8,8 @@ class Layer:
             for _ in range(num_nodes)
         ])
         self.biases = np.zeros(num_nodes)
+        self.activations = None
+        self.raw_output = None
 
         self.costGradientW = np.zeros((num_nodes, num_inputs_from_prev_layer))
         self.costGradientB = np.zeros(num_nodes)
@@ -19,4 +21,7 @@ class Layer:
 
     def forward(self, inputs):
         z = self.weights @ inputs + self.biases
-        return self.activation(z)
+        activated_z = self.activation(z)
+        self.raw_output = z
+        self.activations = activated_z
+        return activated_z
